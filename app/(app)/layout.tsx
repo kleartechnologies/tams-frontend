@@ -14,6 +14,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { tweaks, setTweaks } = useTweaks();
   const [checked, setChecked] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     console.log('[AppShell] mount — checking auth');
@@ -76,16 +77,35 @@ function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <BrandingProvider>
       <div className={appClass} style={cssVars}>
+        {/* Backdrop — tapping it closes the mobile nav */}
+        {mobileNavOpen && (
+          <div
+            className="mobile-nav-overlay"
+            onClick={() => setMobileNavOpen(false)}
+          />
+        )}
+
         <Sidebar
           collapsed={tweaks.sidebarCollapsed}
           setCollapsed={(v) => setTweaks(t => ({ ...t, sidebarCollapsed: v }))}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
         />
+
         <div className="main">
-          <Header />
+          <Header onMenuOpen={() => setMobileNavOpen(true)} />
           <main className="page">
             {children}
           </main>
         </div>
+
+        {/* Floating action button — New Booking, mobile only */}
+        <a href="/bookings/create" className="btn-primary mobile-fab">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          New Booking
+        </a>
       </div>
     </BrandingProvider>
   );

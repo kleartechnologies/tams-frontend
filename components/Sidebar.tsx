@@ -37,6 +37,8 @@ const NAV_SETTINGS = [
 interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 interface NavItemProps {
@@ -98,7 +100,7 @@ function NavItem({ id, href, label, Icon, active, collapsed, badge }: NavItemPro
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
+export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname      = usePathname();
   const { branding }  = useBranding();
   const [pendingCount, setPendingCount]   = useState<number>(0);
@@ -123,7 +125,28 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     <>
       <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
 
-      <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}`}>
+      <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}>
+
+        {/* ── Mobile close button ── */}
+        {mobileOpen && onMobileClose && (
+          <button
+            onClick={onMobileClose}
+            aria-label="Close menu"
+            style={{
+              position: 'absolute', top: 14, right: 14,
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 8, width: 32, height: 32,
+              display: 'grid', placeItems: 'center',
+              cursor: 'pointer', color: 'rgba(255,255,255,0.6)',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
 
         {/* ── Brand ── */}
         <div className="sb-brand">

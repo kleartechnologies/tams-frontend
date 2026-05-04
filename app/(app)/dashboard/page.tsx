@@ -451,9 +451,9 @@ export default function DashboardPage() {
             }
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="dash-header-actions">
           {/* Date range toggle */}
-          <div className="seg">
+          <div className="seg" style={{ flexShrink: 0 }}>
             {(Object.keys(RANGE_LABELS) as RangeKey[]).map(r => (
               <button
                 key={r}
@@ -465,12 +465,12 @@ export default function DashboardPage() {
             ))}
           </div>
           {/* Export */}
-          <button className="btn-ghost" onClick={exportCSV} disabled={exporting} style={{ gap: 6 }}>
+          <button className="btn-ghost" onClick={exportCSV} disabled={exporting} style={{ gap: 6, flexShrink: 0 }}>
             <Download size={13} />
             {exporting ? 'Exporting…' : 'Export'}
           </button>
-          {/* New Booking */}
-          <Link href="/bookings/create" className="btn-primary">
+          {/* New Booking — hidden on mobile (FAB takes over) */}
+          <Link href="/bookings/create" className="btn-primary" style={{ flexShrink: 0 }}>
             <IconPlus size={14} /> New Booking
           </Link>
         </div>

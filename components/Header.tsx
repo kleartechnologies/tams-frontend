@@ -70,7 +70,7 @@ function fmtDate(iso: string) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Header() {
+export default function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
   const router   = useRouter();
   const pathname = usePathname();
 
@@ -244,12 +244,34 @@ export default function Header() {
   return (
     <>
       <header className="header">
+        {/* Hamburger — mobile only */}
+        <button
+          className="icon-btn mobile-menu-btn"
+          onClick={onMenuOpen}
+          aria-label="Open navigation"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+
         <div className="header-title">
           <h1>{title}</h1>
         </div>
 
         <div className="header-tools">
-          {/* Search trigger */}
+          {/* Search icon — mobile only (compact trigger) */}
+          <button
+            className="icon-btn mobile-search-btn"
+            onClick={openSearch}
+            aria-label="Search"
+          >
+            <IconSearch size={16} />
+          </button>
+
+          {/* Search bar — desktop only */}
           <button
             className="search"
             onClick={openSearch}
@@ -409,7 +431,7 @@ export default function Header() {
             )}
           </div>
 
-          <Link href="/bookings/create" className="btn-primary">
+          <Link href="/bookings/create" className="btn-primary header-new-booking">
             <IconPlus size={15} />
             <span>New Booking</span>
           </Link>
