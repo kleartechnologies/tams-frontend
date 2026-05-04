@@ -165,8 +165,11 @@ export default function LoginPage() {
         return;
       }
       router.push('/dashboard');
-    } catch {
-      setError(t.errorProfile);
+    } catch (e: unknown) {
+      const err = e as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message || err?.message || 'unknown';
+      setError(`[${status ?? 'network'}] ${msg}`);
       clearTimeout(failsafe);
       setLoading(false);
     }
