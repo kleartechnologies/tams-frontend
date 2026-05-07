@@ -132,6 +132,10 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [lang, setLang] = useState<Lang>('en');
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('[TAMS] Missing Supabase environment variables — Google login will not work');
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem('tams-lang') as Lang | null;
     if (saved && saved in translations) setLang(saved);
@@ -176,12 +180,26 @@ export default function LoginPage() {
   }
 
   async function handleGoogle() {
+    console.log('[TAMS] Google login clicked');
+    setError('');
     setGoogleLoading(true);
-    await supabase.auth.signInWithOAuth({
+
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    console.log('[TAMS] OAuth redirectTo:', redirectTo);
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo },
     });
-    setGoogleLoading(false);
+
+    if (oauthError) {
+      console.error('[TAMS] Google OAuth error:', oauthError.message);
+      setError(`Google sign-in failed: ${oauthError.message}`);
+      setGoogleLoading(false);
+    } else {
+      console.log('[TAMS] Redirecting to Google…');
+      // Browser will navigate away — no need to setGoogleLoading(false)
+    }
   }
 
   return (

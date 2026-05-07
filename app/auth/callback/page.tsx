@@ -5,32 +5,44 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import api from '@/lib/api';
 
-/**
- * Handles the redirect from Supabase OAuth (Google).
- * Supabase automatically detects the code/token in the URL and
- * establishes the session. We then check if the user has an agency
- * profile and route accordingly.
- */
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function handleCallback() {
-      // Give Supabase a moment to process the URL hash/params
+      // Check for error params Supabase sends back on failure
+      const params = new URLSearchParams(window.location.search);
+      const oauthError = params.get('error');
+      const errorDescription = params.get('error_description');
+
+      if (oauthError) {
+        console.error('[TAMS] OAuth callback error:', oauthError, errorDescription);
+        if (!cancelled) {
+          setErrorMessage(errorDescription?.replace(/\+/g, ' ') ?? oauthError);
+          setStatus('error');
+          setTimeout(() => router.push('/login'), 4000);
+        }
+        return;
+      }
+
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (cancelled) return;
 
       if (error || !session) {
+        console.error('[TAMS] No session after OAuth:', error?.message);
+        setErrorMessage(error?.message ?? 'No session returned');
         setStatus('error');
-        setTimeout(() => router.push('/login'), 2000);
+        setTimeout(() => router.push('/login'), 4000);
         return;
       }
 
-      // Mirror the same profile check as the password login flow
+      console.log('[TAMS] Session established, checking profile…');
+
       try {
         const res = await api.get<{ hasProfile: boolean; agencyId?: string }>('/auth/me');
         if (!res.data.hasProfile || !res.data.agencyId) {
@@ -39,7 +51,6 @@ export default function AuthCallbackPage() {
           router.push('/dashboard');
         }
       } catch {
-        // If the profile check fails, send to dashboard and let it handle it
         router.push('/dashboard');
       }
     }
@@ -79,8 +90,38 @@ export default function AuthCallbackPage() {
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </>
       ) : (
-        <div style={{ color: 'var(--rose)', fontSize: 14 }}>
-          Authentication failed. Redirecting to login…
+        <div style={{ textAlign: 'center', maxWidth: 360 }}>
+          <div style={{ color: 'var(--rose, #e11d48)', fontSize: 14, marginBottom: 8 }}>
+            Authentication failed. Redirecting to login…
+          </div>
+          {errorMessage && (
+            <div style={{
+              fontSize: 12,
+              color: '#888',
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: 8,
+              padding: '8px 12px',
+              marginTop: 8,
+              wordBreak: 'break-word',
+            }}>
+              {errorMessage}
+            </div>
+          )}
+          <button
+            onClick={() => router.push('/login')}
+            style={{
+              marginTop: 16,
+              fontSize: 13,
+              color: '#60a5fa',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Go back to login
+          </button>
         </div>
       )}
     </div>
