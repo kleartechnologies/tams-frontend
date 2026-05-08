@@ -196,14 +196,14 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold text-gray-700">Invoice</h2>
           <p className="text-xs text-gray-400 mt-0.5">
             {invNumber} &middot; Booking {booking.bookingNumber ?? booking.id.slice(0, 8).toUpperCase()}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => openDocument(`/bookings/${booking.id}/invoice`)}
             className="inline-flex items-center gap-1.5 text-xs font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
@@ -227,7 +227,7 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
       </div>
 
       <div className="px-5 py-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Invoice No.</p>
             <p className="text-sm font-semibold text-gray-900 font-mono">{invNumber}</p>
@@ -403,41 +403,43 @@ export default function BookingDetailPage() {
       <div className="max-w-5xl space-y-6">
 
         {/* Breadcrumb + actions */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <Link href="/bookings" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              ← Bookings
-            </Link>
-            <div className="flex items-center gap-3 mt-2">
-              <h1 className="text-xl font-bold text-gray-900 font-mono">
-                {booking.bookingNumber ?? booking.id.slice(0, 8).toUpperCase()}
-              </h1>
-              <StatusPill status={booking.status} />
+        <div className="flex flex-col gap-3">
+          <Link href="/bookings" className="text-sm text-gray-400 hover:text-gray-600 transition-colors self-start">
+            ← Bookings
+          </Link>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold text-gray-900 font-mono break-all">
+                  {booking.bookingNumber ?? booking.id.slice(0, 8).toUpperCase()}
+                </h1>
+                <StatusPill status={booking.status} />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Created {fmtDateTime(booking.createdAt)}</p>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Created {fmtDateTime(booking.createdAt)}</p>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => openDocument(`/bookings/${booking.id}/pdf`)}
-              className="text-sm font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-1.5"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
-              </svg>
-              PDF
-            </button>
-            <button
-              onClick={openStatusModal}
-              className="text-sm font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-            >
-              Edit Status
-            </button>
-            <button
-              onClick={openPaymentModal}
-              className="text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              + Add Payment
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => openDocument(`/bookings/${booking.id}/pdf`)}
+                className="text-sm font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                </svg>
+                PDF
+              </button>
+              <button
+                onClick={openStatusModal}
+                className="text-sm font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                Edit Status
+              </button>
+              <button
+                onClick={openPaymentModal}
+                className="text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                + Add Payment
+              </button>
+            </div>
           </div>
         </div>
 
