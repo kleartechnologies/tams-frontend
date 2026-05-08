@@ -313,7 +313,7 @@ export default function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
             {bellOpen && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                width: 340, maxHeight: 440, overflowY: 'auto',
+                width: 340, maxWidth: 'calc(100vw - 24px)', maxHeight: 440, overflowY: 'auto',
                 background: 'var(--canvas)', border: '1px solid var(--line)',
                 borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,.10)',
                 zIndex: 200,

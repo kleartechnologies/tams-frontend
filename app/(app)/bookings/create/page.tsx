@@ -1036,7 +1036,7 @@ function CreateBookingForm() {
 
             {recordPayment && (
               <div className="mt-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">
                       Amount Paid (MYR) <span className="text-red-500">*</span>
@@ -1059,7 +1059,7 @@ function CreateBookingForm() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">Payment Type</label>
                     <select

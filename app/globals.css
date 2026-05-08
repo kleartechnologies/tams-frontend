@@ -868,6 +868,19 @@ button { font-family: inherit; }
   }
 }
 
+/* ── Extra-small phones (≤ 480px) ── */
+@media (max-width: 480px) {
+  .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi { padding: 12px 12px 10px; }
+  .kpi-num { font-size: 20px; }
+  .kpi-prefix { font-size: 12px; }
+  .header { padding: 0 10px; height: 52px; }
+  .page { padding: 12px 10px 88px; gap: 12px; }
+  .card { padding: 12px; }
+  /* Table horizontal scroll — ensure it never breaks the page width */
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+}
+
 /* Scrollbars */
 .sb-nav::-webkit-scrollbar { width: 4px; }
 .sb-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }

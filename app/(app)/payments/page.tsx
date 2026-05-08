@@ -156,8 +156,8 @@ export default function PaymentsPage() {
     <div className="max-w-7xl space-y-6">
 
       {/* Tab filters */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between gap-4">
-        <div className="flex gap-1">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1">
           {TABS.map(({ key, label }) => (
             <button
               key={key}

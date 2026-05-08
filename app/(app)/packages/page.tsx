@@ -339,15 +339,15 @@ export default function PackagesPage() {
       <div className="max-w-6xl space-y-6">
 
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <h1 className="text-xl font-semibold text-gray-900 flex-shrink-0">Packages</h1>
-          <div className="flex flex-1 items-center gap-3">
+          <div className="flex flex-1 w-full items-center gap-3">
             <input
               type="text"
               placeholder="Search by name or destination..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="flex-1 min-w-0 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
             <button
               onClick={openCreate}
@@ -367,6 +367,7 @@ export default function PackagesPage() {
           ) : filtered.length === 0 ? (
             <div className="p-10 text-center text-sm text-gray-400">No packages found.</div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
@@ -435,6 +436,7 @@ export default function PackagesPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

@@ -157,15 +157,15 @@ export default function CustomersPage() {
       <div className="max-w-6xl space-y-6">
 
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <h1 className="text-xl font-semibold text-gray-900 flex-shrink-0">Customers</h1>
-          <div className="flex flex-1 items-center gap-3">
+          <div className="flex flex-1 w-full items-center gap-3">
             <input
               type="text"
               placeholder="Search by name or phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="flex-1 min-w-0 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
             <button
               onClick={openCustomerModal}
@@ -197,10 +197,11 @@ export default function CustomersPage() {
               )}
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-6 py-3 font-semibold text-gray-600">Name</th>
+                  <th className="text-left px-6 py-3 font-semibold text-gray-600 whitespace-nowrap">Name</th>
                   <th className="text-left px-6 py-3 font-semibold text-gray-600">Phone</th>
                   <th className="text-left px-6 py-3 font-semibold text-gray-600">IC Number</th>
                   <th className="text-left px-6 py-3 font-semibold text-gray-600">Latest Package</th>
@@ -265,6 +266,7 @@ export default function CustomersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
