@@ -94,12 +94,20 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
 // ── Document opener (fetches via API so auth header is attached) ───────────────
 
 async function openDocument(path: string) {
+  // Open the window synchronously (inside the click handler) so browsers
+  // don't treat it as a popup. Writing content happens after the fetch.
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Popups are blocked. Please allow popups for this site and try again.');
+    return;
+  }
   try {
     const res = await api.get<string>(path, { responseType: 'text' });
-    const blob = new Blob([res.data], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    win.document.open();
+    win.document.write(res.data);
+    win.document.close();
   } catch {
+    win.close();
     alert('Failed to load document. Please try again.');
   }
 }
