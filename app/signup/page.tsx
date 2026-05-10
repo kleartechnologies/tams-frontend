@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -166,7 +166,7 @@ type Lang = keyof typeof translations;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function SignupPage() {
+function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planParam = searchParams.get('plan');
@@ -508,5 +508,13 @@ export default function SignupPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function SignupPageWrapper() {
+  return (
+    <Suspense>
+      <SignupPage />
+    </Suspense>
   );
 }

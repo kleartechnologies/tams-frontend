@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { type PlanUsage } from '@/lib/plans';
@@ -81,7 +81,7 @@ const PLANS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function BillingPage() {
+function BillingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -393,5 +393,13 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
       <p style={{ fontSize: 12, color: '#6b7280', margin: 0, marginBottom: 2 }}>{label}</p>
       <p style={{ fontSize: 15, fontWeight: 700, color: warn ? '#dc2626' : '#111827', margin: 0 }}>{value}</p>
     </div>
+  );
+}
+
+export default function BillingPageWrapper() {
+  return (
+    <Suspense>
+      <BillingPage />
+    </Suspense>
   );
 }

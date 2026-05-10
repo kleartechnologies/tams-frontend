@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -70,7 +70,7 @@ const FEATURES = [
   'Multi-user & multi-agency support',
 ];
 
-export default function RegisterPage() {
+function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planParam = searchParams.get('plan');
@@ -475,5 +475,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RegisterPageWrapper() {
+  return (
+    <Suspense>
+      <RegisterPage />
+    </Suspense>
   );
 }
