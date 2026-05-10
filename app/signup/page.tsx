@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import api from '@/lib/api';
@@ -168,6 +168,8 @@ type Lang = keyof typeof translations;
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get('plan');
   const failsafeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [firstName, setFirstName] = useState('');
@@ -247,7 +249,7 @@ export default function SignupPage() {
         }
       }
 
-      router.push('/dashboard');
+      router.push(planParam ? `/billing?plan=${planParam}` : '/dashboard');
     } catch {
       clearTimeout(failsafeRef.current!);
       setError(t.errorGeneral);

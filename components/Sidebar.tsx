@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { Users } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Users, CreditCard } from 'lucide-react';
 import {
   IconDashboard, IconCustomers, IconPackages,
   IconBookings, IconReports, IconCollapse, IconSettings, IconPayments,
@@ -30,6 +30,7 @@ const NAV_ANALYTICS = [
 const NAV_SETTINGS = [
   { id: 'settings', href: '/settings', label: 'Settings', Icon: IconSettings },
   { id: 'team',     href: '/settings/team', label: 'Team', Icon: Users },
+  { id: 'billing',  href: '/billing',       label: 'Billing', Icon: CreditCard },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -102,9 +103,9 @@ function NavItem({ id, href, label, Icon, active, collapsed, badge }: NavItemPro
 
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname      = usePathname();
+  const router        = useRouter();
   const { branding }  = useBranding();
   const [pendingCount, setPendingCount]   = useState<number>(0);
-  const [showUpgrade, setShowUpgrade]     = useState(false);
 
   useEffect(() => {
     api.get<{ total: number }>('/payments', { params: { status: 'PENDING', limit: 1 } })
@@ -115,7 +116,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
   function isActive(href: string) {
     if (href === '/settings' && pathname === '/settings') return true;
     if (href === '/settings/team' && pathname.startsWith('/settings/team')) return true;
-    if (href !== '/settings' && href !== '/settings/team') {
+    if (href === '/billing' && pathname.startsWith('/billing')) return true;
+    if (href !== '/settings' && href !== '/settings/team' && href !== '/billing') {
       return pathname.split('/')[1] === href.split('/')[1];
     }
     return false;
@@ -123,7 +125,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
 
   return (
     <>
-      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <UpgradeModal open={false} onClose={() => {}} />
 
       <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}>
 
@@ -220,7 +222,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
 
           {/* Plan banner */}
           <div style={{ marginBottom: 10 }}>
-            <PlanBanner onUpgradeClick={() => setShowUpgrade(true)} collapsed={collapsed} />
+            <PlanBanner onUpgradeClick={() => router.push('/billing')} collapsed={collapsed} />
           </div>
 
           {/* Agency card */}

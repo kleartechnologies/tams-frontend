@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import api from '@/lib/api';
@@ -72,6 +72,8 @@ const FEATURES = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get('plan');
 
   // When the user already has a Supabase session (e.g. Google OAuth), we skip
   // the email/password fields and only ask for the agency name.
@@ -113,11 +115,11 @@ export default function RegisterPage() {
       console.log('[RegisterPage] creating agency for existing user');
       await api.post('/auth/register', { agencyName });
       clearTimeout(failsafeRef.current!);
-      router.push('/dashboard');
+      router.push(planParam ? `/billing?plan=${planParam}` : '/dashboard');
     } catch (err: unknown) {
       clearTimeout(failsafeRef.current!);
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 409) { router.push('/dashboard'); return; }
+      if (status === 409) { router.push(planParam ? `/billing?plan=${planParam}` : '/dashboard'); return; }
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg ?? 'Failed to create agency. Please try again.');
       setLoading(false);
@@ -171,8 +173,8 @@ export default function RegisterPage() {
         }
       }
 
-      console.log('[RegisterPage] success → /dashboard');
-      router.push('/dashboard');
+      console.log('[RegisterPage] success → billing or dashboard');
+      router.push(planParam ? `/billing?plan=${planParam}` : '/dashboard');
     } catch {
       clearTimeout(failsafeRef.current!);
       setError('Something went wrong. Please try again.');
