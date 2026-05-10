@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Zap, CheckCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { PLANS, type PlanUsage } from '@/lib/plans';
@@ -19,6 +20,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
 };
 
 export default function UpgradeModal({ open, onClose, reason }: UpgradeModalProps) {
+  const router = useRouter();
   const [usage, setUsage] = useState<PlanUsage | null>(null);
 
   useEffect(() => {
@@ -137,8 +139,8 @@ export default function UpgradeModal({ open, onClose, reason }: UpgradeModalProp
                 {!isCurrent && !isDowngrade && (
                   <button
                     onClick={() => {
-                      // Stripe integration goes here — for now just close + show intent
-                      alert(`Upgrade to ${plan.name} — Stripe integration coming soon.`);
+                      onClose();
+                      router.push(`/billing?plan=${key}`);
                     }}
                     style={{
                       width: '100%', padding: '7px 0', borderRadius: 8,
