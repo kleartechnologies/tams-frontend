@@ -1,17 +1,32 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { qk, fetchDashboard, fetchRevenueTrend } from '@/lib/queries';
 import { motion, type Variants } from 'framer-motion';
 import CountUp from 'react-countup';
-import { Wallet, CalendarDays, Users2, AlertTriangle, Download, TrendingUp, TrendingDown, Star, Clock, CheckCircle, Lightbulb } from 'lucide-react';
-import RevenueChart, { type RevPoint } from '@/components/RevenueChart';
+import { Wallet, CalendarDays, Users2, AlertTriangle, Download, TrendingUp, TrendingDown, Clock, Lightbulb } from 'lucide-react';
 import {
   IconArrowUp, IconArrowDown, IconBookings,
   IconCustomers, IconPackages, IconChevron, IconPlus,
 } from '@/components/icons';
+
+import type { RevPoint } from '@/components/RevenueChart';
+
+const RevenueChart = dynamic(() => import('@/components/RevenueChart'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ width: '100%', height: 220, display: 'flex', alignItems: 'flex-end', gap: 6, padding: '0 4px' }}>
+      {[60, 85, 45, 90, 70, 100, 55].map((h, i) => (
+        <div key={i} className="skeleton" style={{ flex: 1, height: `${h}%`, borderRadius: 6 }} />
+      ))}
+    </div>
+  ),
+});
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -230,7 +245,7 @@ function computeInsights(
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function StatusPill({ status }: { status: string }) {
+const StatusPill = memo(function StatusPill({ status }: { status: string }) {
   const t = STATUS_TONES[status] ?? STATUS_TONES.Upcoming;
   return (
     <span className="pill" style={{ background: t.bg, color: t.fg }}>
@@ -238,9 +253,9 @@ function StatusPill({ status }: { status: string }) {
       {STATUS_LABELS[status] ?? status}
     </span>
   );
-}
+});
 
-function KpiCard({ label, prefix, value, delta, loading, icon, iconColor }: {
+const KpiCard = memo(function KpiCard({ label, prefix, value, delta, loading, icon, iconColor }: {
   label: string; prefix: string; value: number;
   delta: number | null; loading: boolean;
   icon: React.ReactNode; iconColor: string;
@@ -286,31 +301,25 @@ function KpiCard({ label, prefix, value, delta, loading, icon, iconColor }: {
       )}
     </motion.div>
   );
-}
+});
 
 // ── Dashboard page ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [range, setRange]               = useState<RangeKey>('30d');
-  const rangeRef                        = useRef<RangeKey>('30d');
-  rangeRef.current = range;
+  const [range, setRange]   = useState<RangeKey>('30d');
+  const rangeRef            = useRef<RangeKey>('30d');
+  rangeRef.current          = range;
 
-  const [summary, setSummary]           = useState<Summary | null>(null);
-  const [upcoming, setUpcoming]         = useState<UpcomingBooking[]>([]);
-  const [outstanding, setOutstanding]   = useState<OutstandingBooking[]>([]);
-  const [recent, setRecent]             = useState<RecentBooking[]>([]);
-  const [revenueTrend, setRevenueTrend] = useState<RevPoint[]>([]);
-  const [topPackages, setTopPackages]   = useState<TopPackage[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [exporting, setExporting]       = useState(false);
-  const [filter, setFilter]             = useState('All');
+  const [exporting, setExporting] = useState(false);
+  const [filter, setFilter]       = useState('All');
 
-  // Greeting — computed on client only to avoid SSR/hydration mismatch
-  const [greeting, setGreeting]         = useState('Dashboard');
-  const [userName, setUserName]         = useState('');
-  const [dateStr, setDateStr]           = useState('');
+  const queryClient = useQueryClient();
 
   // ── Greeting ────────────────────────────────────────────────────────────────
+
+  const [greeting, setGreeting] = useState('Dashboard');
+  const [userName, setUserName] = useState('');
+  const [dateStr, setDateStr]   = useState('');
 
   useEffect(() => {
     const now = new Date();
@@ -322,7 +331,6 @@ export default function DashboardPage() {
     supabase.auth.getSession().then(({ data }) => {
       const user = data.session?.user;
       if (!user) return;
-      // Prefer OAuth full name, fall back to deriving from email
       const meta = user.user_metadata as Record<string, string> | undefined;
       const fullName = meta?.full_name || meta?.name || '';
       const first = fullName.split(' ')[0] || nameFromEmail(user.email ?? '');
@@ -330,39 +338,33 @@ export default function DashboardPage() {
     });
   }, []);
 
-  // ── Fetch ───────────────────────────────────────────────────────────────────
+  // ── Data fetching via React Query ───────────────────────────────────────────
 
-  const fetchData = useCallback(async (r: RangeKey) => {
-    setLoading(true);
-    const { from, to } = getRangeDates(r);
-    const trendFrom = chartFromDate();
+  const { from, to } = getRangeDates(range);
+  const trendFrom    = chartFromDate();
 
-    try {
-      const [s, u, o, b, t, p] = await Promise.all([
-        api.get<Summary>(`/reports/summary?from=${from}&to=${to}`),
-        api.get<{ total: number; bookings: UpcomingBooking[] }>('/reports/upcoming'),
-        api.get<OutstandingBooking[]>('/reports/outstanding'),
-        api.get<{ data: RecentBooking[] }>('/bookings?page=1&limit=8'),
-        api.get<TrendPoint[]>(`/reports/revenue-trend?from=${trendFrom}`),
-        api.get<TopPackage[]>(`/reports/top-packages?from=${from}&to=${to}`),
-      ]);
-      setSummary(s.data);
-      setUpcoming(u.data.bookings.slice(0, 5));
-      setOutstanding(o.data.slice(0, 5));
-      setRecent(b.data.data);
-      setRevenueTrend(aggregateMonthly(t.data));
-      setTopPackages(p.data.slice(0, 5));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: qk.dashboard(from, to),
+    queryFn:  () => fetchDashboard(from, to),
+    staleTime: 30_000,
+  });
 
-  // Re-fetch when range changes
-  useEffect(() => {
-    fetchData(range);
-  }, [range, fetchData]);
+  const { data: rawTrend } = useQuery({
+    queryKey: ['revenueTrend', trendFrom],
+    queryFn:  () => fetchRevenueTrend(trendFrom),
+    staleTime: 5 * 60_000,
+  });
 
-  // Realtime: re-fetch on any booking or payment change
+  // Derive typed slices from the combined response
+  const summary: Summary | null      = data?.summary ?? null;
+  const upcoming: UpcomingBooking[]  = (data?.upcoming?.bookings ?? []).slice(0, 5);
+  const outstanding: OutstandingBooking[] = (data?.outstanding ?? []).slice(0, 5);
+  const recent: RecentBooking[]      = data?.recentBookings ?? [];
+  const topPackages: TopPackage[]    = (data?.topPackages ?? []).slice(0, 5);
+  const revenueTrend: RevPoint[]     = rawTrend ? aggregateMonthly(rawTrend) : [];
+
+  // ── Realtime: invalidate React Query cache on DB changes ────────────────────
+
   useEffect(() => {
     let debounce: ReturnType<typeof setTimeout>;
 
@@ -370,11 +372,15 @@ export default function DashboardPage() {
       .channel('dashboard-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
         clearTimeout(debounce);
-        debounce = setTimeout(() => fetchData(rangeRef.current), 600);
+        debounce = setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        }, 600);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => {
         clearTimeout(debounce);
-        debounce = setTimeout(() => fetchData(rangeRef.current), 600);
+        debounce = setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        }, 600);
       })
       .subscribe();
 
@@ -382,15 +388,15 @@ export default function DashboardPage() {
       clearTimeout(debounce);
       supabase.removeChannel(channel);
     };
-  }, [fetchData]);
+  }, [queryClient]);
 
   // ── Export CSV ──────────────────────────────────────────────────────────────
 
   const exportCSV = useCallback(async () => {
     setExporting(true);
-    const { from, to } = getRangeDates(rangeRef.current);
+    const { from: f, to: t } = getRangeDates(rangeRef.current);
     try {
-      const res = await api.get<BookingExport[]>(`/reports/bookings?from=${from}&to=${to}`);
+      const res = await api.get<BookingExport[]>(`/reports/bookings?from=${f}&to=${t}`);
       const rows = res.data;
       if (!rows.length) return;
 
@@ -411,7 +417,7 @@ export default function DashboardPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bookings-${from}-to-${to}.csv`;
+      a.download = `bookings-${f}-to-${t}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -424,9 +430,9 @@ export default function DashboardPage() {
   // ── Derived values ──────────────────────────────────────────────────────────
 
   const FILTERS = ['All', 'CONFIRMED', 'INQUIRY', 'COMPLETED', 'CANCELLED'];
-  const filteredRecent = filter === 'All' ? recent : recent.filter(r => r.status === filter);
-  const totalOutstanding = outstanding.reduce((s, b) => s + b.balanceDue, 0);
-  const avgBookingValue = summary && summary.totalBookings > 0
+  const filteredRecent    = filter === 'All' ? recent : recent.filter(r => r.status === filter);
+  const totalOutstanding  = outstanding.reduce((s, b) => s + b.balanceDue, 0);
+  const avgBookingValue   = summary && summary.totalBookings > 0
     ? summary.totalSales / summary.totalBookings
     : 0;
   const bestPackage = topPackages[0]?.name ?? null;

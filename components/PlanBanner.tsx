@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { qk, fetchPlanUsage } from '@/lib/queries';
 import { type PlanUsage } from '@/lib/plans';
 
 interface PlanBannerProps {
@@ -10,13 +10,11 @@ interface PlanBannerProps {
 }
 
 export default function PlanBanner({ onUpgradeClick, collapsed }: PlanBannerProps) {
-  const [usage, setUsage] = useState<PlanUsage | null>(null);
-
-  useEffect(() => {
-    api.get<PlanUsage>('/plans/usage')
-      .then((r) => setUsage(r.data))
-      .catch(() => {});
-  }, []);
+  const { data: usage } = useQuery<PlanUsage>({
+    queryKey: qk.planUsage(),
+    queryFn:  fetchPlanUsage,
+    staleTime: 2 * 60_000,
+  });
 
   if (!usage) return null;
 

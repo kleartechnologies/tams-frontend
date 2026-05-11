@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { makeQueryClient } from '@/lib/queryClient';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { TweaksProvider, useTweaks } from '@/components/TweaksContext';
@@ -57,7 +59,22 @@ function AppShell({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!checked) return null;
+  if (!checked) {
+    return (
+      <div className="app" style={{ display: 'flex', minHeight: '100vh' }}>
+        <aside style={{ width: 240, background: 'var(--sidebar-bg, #1a2332)', flexShrink: 0 }} />
+        <div className="main" style={{ flex: 1, padding: '32px 24px' }}>
+          <div className="skeleton" style={{ width: 200, height: 28, borderRadius: 6, marginBottom: 24 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton" style={{ height: 100, borderRadius: 12 }} />
+            ))}
+          </div>
+          <div className="skeleton" style={{ height: 220, borderRadius: 12 }} />
+        </div>
+      </div>
+    );
+  }
 
   const appClass = [
     'app',
@@ -112,11 +129,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const clientRef = useRef<QueryClient | null>(null);
+  if (!clientRef.current) clientRef.current = makeQueryClient();
+
   return (
-    <TweaksProvider>
-      <ToastProvider>
-        <AppShell>{children}</AppShell>
-      </ToastProvider>
-    </TweaksProvider>
+    <QueryClientProvider client={clientRef.current}>
+      <TweaksProvider>
+        <ToastProvider>
+          <AppShell>{children}</AppShell>
+        </ToastProvider>
+      </TweaksProvider>
+    </QueryClientProvider>
   );
 }

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { qk, fetchSettings } from '@/lib/queries';
 import { useBranding } from '@/components/BrandingContext';
 
 type PdfTemplate = 'classic' | 'modern' | 'premium';
@@ -142,9 +144,15 @@ function SaveRow({ saving, success, error, label = 'Save' }: {
 export default function SettingsPage() {
   const router = useRouter();
   const { refresh } = useBranding();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [loading, setLoading] = useState(true);
+  const { data: settingsData, isLoading: loading } = useQuery({
+    queryKey: qk.settings(),
+    queryFn:  fetchSettings,
+    staleTime: 5 * 60_000,
+  });
+
   const [s, setS] = useState<Settings>(EMPTY);
   const [logoError, setLogoError] = useState('');
 
@@ -176,13 +184,10 @@ export default function SettingsPage() {
   const [errorNotes,         setErrorNotes]         = useState('');
   const [errorSST,           setErrorSST]           = useState('');
 
+  // Sync form state from React Query cache when data arrives
   useEffect(() => {
-
-    api.get<Settings>('/settings')
-      .then((res) => setS({ ...EMPTY, ...res.data }))
-      .catch(() => {/* silently use empty defaults */})
-      .finally(() => setLoading(false));
-  }, [router]);
+    if (settingsData) setS({ ...EMPTY, ...settingsData });
+  }, [settingsData]);
 
   function set(partial: Partial<Settings>) {
     setS((prev) => ({ ...prev, ...partial }));
@@ -218,7 +223,9 @@ export default function SettingsPage() {
     try {
       await api.put('/settings', payload);
       setSuccess(true);
-      if (doRefresh) await refresh();
+      // Invalidate the shared settings cache so BrandingContext and sidebar update immediately
+      queryClient.invalidateQueries({ queryKey: qk.settings() });
+      if (doRefresh) refresh();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Failed to save.');

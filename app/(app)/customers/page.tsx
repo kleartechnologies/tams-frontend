@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { qk, fetchCustomers as fetchCustomersApi } from '@/lib/queries';
 import { useToast } from '@/components/Toast';
 
 interface LatestBooking {
@@ -68,32 +70,44 @@ function TableSkeleton() {
   );
 }
 
+const LIMIT = 20;
+
 export default function CustomersPage() {
   const router = useRouter();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const firstInputRef = useRef<HTMLInputElement>(null);
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [page, setPage]                   = useState(1);
+  const [search, setSearch]               = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input — resets page to 1 on new term
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const queryParams = { page, limit: LIMIT, search: debouncedSearch || undefined };
+
+  const { data, isLoading: loading, isError } = useQuery<CustomersResponse>({
+    queryKey: qk.customers(queryParams),
+    queryFn:  () => fetchCustomersApi(queryParams),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+
+  const customers = data?.data ?? [];
+  const total     = data?.total ?? 0;
+  const totalPages = Math.ceil(total / LIMIT);
 
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerForm, setCustomerForm] = useState(EMPTY_CUSTOMER_FORM);
   const [customerFormError, setCustomerFormError] = useState('');
   const [customerSubmitting, setCustomerSubmitting] = useState(false);
-
-  function fetchCustomers() {
-    return api
-      .get<CustomersResponse>('/customers')
-      .then((res) => setCustomers(res.data.data))
-      .catch(() => setError('Failed to load customers.'))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [router]);
 
   // Escape key to close modal
   useEffect(() => {
@@ -137,20 +151,13 @@ export default function CustomersPage() {
       });
       setShowCustomerModal(false);
       toast.success('Customer added successfully.');
-      setLoading(true);
-      fetchCustomers();
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     } catch (err: any) {
       setCustomerFormError(err.response?.data?.message ?? 'Failed to create customer.');
     } finally {
       setCustomerSubmitting(false);
     }
   }
-
-  const filtered = customers.filter(
-    (c) =>
-      c.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search),
-  );
 
   return (
     <>
@@ -180,14 +187,14 @@ export default function CustomersPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
             <TableSkeleton />
-          ) : error ? (
-            <div className="p-10 text-center text-sm text-red-500">{error}</div>
-          ) : filtered.length === 0 ? (
+          ) : isError ? (
+            <div className="p-10 text-center text-sm text-red-500">Failed to load customers.</div>
+          ) : customers.length === 0 ? (
             <div className="p-10 text-center">
               <p className="text-sm text-gray-400 mb-3">
-                {search ? 'No customers match your search.' : 'No customers yet.'}
+                {debouncedSearch ? 'No customers match your search.' : 'No customers yet.'}
               </p>
-              {!search && (
+              {!debouncedSearch && (
                 <button
                   onClick={openCustomerModal}
                   className="text-sm font-medium text-blue-600 hover:underline"
@@ -211,7 +218,7 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((customer) => (
+                {customers.map((customer) => (
                   <tr
                     key={customer.id}
                     className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors"
@@ -270,11 +277,32 @@ export default function CustomersPage() {
           )}
         </div>
 
-        {/* Footer count */}
-        {!loading && !error && (
-          <p className="text-xs text-gray-400 text-right">
-            {filtered.length} of {customers.length} customers
-          </p>
+        {/* Footer — count + pagination */}
+        {!loading && !isError && total > 0 && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total} customers
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-gray-500">Page {page} / {totalPages}</span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
       </div>

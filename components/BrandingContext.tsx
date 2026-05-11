@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import api from '@/lib/api';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { qk, fetchSettings } from '@/lib/queries';
 
 export interface Branding {
   agencyName: string;
@@ -19,47 +20,44 @@ const CACHE_KEY = 'tams-branding';
 
 interface BrandingCtx {
   branding: Branding;
-  refresh: () => Promise<void>;
+  refresh: () => void;
 }
 
 const BrandingContext = createContext<BrandingCtx>({
   branding: DEFAULTS,
-  refresh:  async () => {},
+  refresh:  () => {},
 });
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
-  // Always start with DEFAULTS so SSR and initial client render match.
-  // localStorage and API values are applied after hydration in useEffect.
-  const [branding, setBranding] = useState<Branding>(DEFAULTS);
+  const queryClient = useQueryClient();
 
-  async function refresh() {
-    try {
-      const res = await api.get<Branding>('/settings');
-      const data: Branding = {
-        agencyName: res.data.agencyName || DEFAULTS.agencyName,
-        agencyTag:  res.data.agencyTag  || DEFAULTS.agencyTag,
-        logoUrl:    res.data.logoUrl    ?? null,
-      };
-      setBranding(data);
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    } catch {
-      // fall back to localStorage cache if API fails
+  const { data } = useQuery({
+    queryKey: qk.settings(),
+    queryFn:  fetchSettings,
+    staleTime: 5 * 60_000,
+    // Seed the cache from localStorage so the sidebar has data before the first network response
+    initialData: () => {
       try {
         const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) setBranding({ ...DEFAULTS, ...JSON.parse(cached) });
-      } catch { /* ignore */ }
-    }
-  }
+        return cached ? JSON.parse(cached) : undefined;
+      } catch { return undefined; }
+    },
+  });
 
+  const branding: Branding = {
+    agencyName: data?.agencyName || DEFAULTS.agencyName,
+    agencyTag:  data?.agencyTag  || DEFAULTS.agencyTag,
+    logoUrl:    data?.logoUrl    ?? null,
+  };
+
+  // Persist to localStorage so the next cold load seeds the cache instantly
   useEffect(() => {
-    // Apply localStorage cache immediately (sync) to minimise flash,
-    // then overwrite with the live API value.
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) setBranding({ ...DEFAULTS, ...JSON.parse(cached) });
-    } catch { /* ignore */ }
-    refresh();
-  }, []);
+    if (data) {
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
+    }
+  }, [data]);
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: qk.settings() });
 
   return (
     <BrandingContext.Provider value={{ branding, refresh }}>

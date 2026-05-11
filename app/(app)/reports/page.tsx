@@ -1,15 +1,23 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
-import * as XLSX from 'xlsx';
-import {
-  LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { qk } from '@/lib/queries';
+
+// Lazy-load recharts — ~142 KB gzipped, only needed on this page
+const LineChart        = dynamic(() => import('recharts').then((m) => ({ default: m.LineChart })),        { ssr: false });
+const Line             = dynamic(() => import('recharts').then((m) => ({ default: m.Line })),             { ssr: false });
+const BarChart         = dynamic(() => import('recharts').then((m) => ({ default: m.BarChart })),         { ssr: false });
+const Bar              = dynamic(() => import('recharts').then((m) => ({ default: m.Bar })),              { ssr: false });
+const XAxis            = dynamic(() => import('recharts').then((m) => ({ default: m.XAxis })),            { ssr: false });
+const YAxis            = dynamic(() => import('recharts').then((m) => ({ default: m.YAxis })),            { ssr: false });
+const CartesianGrid    = dynamic(() => import('recharts').then((m) => ({ default: m.CartesianGrid })),    { ssr: false });
+const Tooltip          = dynamic(() => import('recharts').then((m) => ({ default: m.Tooltip })),          { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then((m) => ({ default: m.ResponsiveContainer })), { ssr: false });
+const Cell             = dynamic(() => import('recharts').then((m) => ({ default: m.Cell })),             { ssr: false });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -196,7 +204,8 @@ function doExportCSV(rows: ExportBooking[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function doExportExcel(rows: ExportBooking[], filename: string) {
+async function doExportExcel(rows: ExportBooking[], filename: string) {
+  const XLSX = await import('xlsx');
   const data = buildRows(rows);
   const ws   = XLSX.utils.json_to_sheet(data);
 
@@ -237,8 +246,6 @@ function BarTooltip({ active, payload, label }: any) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
-  const router = useRouter();
-
   // ── Date filter state ──────────────────────────────────────────
   const [preset, setPreset]       = useState<Preset>('30D');
   const [customFrom, setCustomFrom] = useState('');
@@ -247,24 +254,16 @@ export default function ReportsPage() {
   // computed range (stable reference for fetch dependency)
   const range = presetToRange(preset, customFrom, customTo);
 
-  // ── Report data ────────────────────────────────────────────────
-  const [summary,     setSummary]     = useState<Summary | null>(null);
-  const [trend,       setTrend]       = useState<TrendPoint[]>([]);
-  const [topPackages, setTopPackages] = useState<TopPackage[]>([]);
-  const [outstanding, setOutstanding] = useState<OutstandingBooking[]>([]);
-  const [recent,      setRecent]      = useState<RecentPayment[]>([]);
-
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
-
   // ── Export state ───────────────────────────────────────────────
   const [exporting,   setExporting]   = useState<'csv' | 'xlsx' | null>(null);
 
-  const fetchAll = useCallback(async (from: string, to: string) => {
-    setLoading(true);
-    setError('');
-    const qs = `from=${from}&to=${to}`;
-    try {
+  const { from, to } = range;
+  const isCustomReady = preset !== 'CUSTOM' || (!!customFrom && !!customTo);
+
+  const { data, isLoading: loading, isError } = useQuery({
+    queryKey: qk.reports(from, to),
+    queryFn:  async () => {
+      const qs = `from=${from}&to=${to}`;
       const [s, t, tp, out, rec] = await Promise.all([
         api.get<Summary>(`/reports/summary?${qs}`),
         api.get<TrendPoint[]>(`/reports/revenue-trend?${qs}`),
@@ -272,30 +271,24 @@ export default function ReportsPage() {
         api.get<OutstandingBooking[]>('/reports/outstanding'),
         api.get<{ data: RecentPayment[] }>('/payments?limit=10&page=1'),
       ]);
-      setSummary(s.data);
-      setTrend(t.data);
-      setTopPackages(tp.data);
-      setOutstanding(out.data);
-      setRecent(rec.data.data);
-    } catch {
-      setError('Failed to load report data.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return {
+        summary:     s.data,
+        trend:       t.data,
+        topPackages: tp.data,
+        outstanding: out.data,
+        recent:      rec.data.data,
+      };
+    },
+    enabled:   isCustomReady,
+    staleTime: 60_000,
+  });
 
-  // Only re-fetch when the computed date range actually changes
-  const prevRange = useRef({ from: '', to: '' });
-  useEffect(() => {
-
-    // For CUSTOM preset, don't fetch until both dates are filled
-    if (preset === 'CUSTOM' && (!customFrom || !customTo)) return;
-
-    const r = presetToRange(preset, customFrom, customTo);
-    if (r.from === prevRange.current.from && r.to === prevRange.current.to) return;
-    prevRange.current = r;
-    fetchAll(r.from, r.to);
-  }, [preset, customFrom, customTo, fetchAll, router]);
+  const summary     = data?.summary     ?? null;
+  const trend       = data?.trend       ?? [];
+  const topPackages = data?.topPackages ?? [];
+  const outstanding = data?.outstanding ?? [];
+  const recent      = data?.recent      ?? [];
+  const error       = isError ? 'Failed to load report data.' : '';
 
   async function handleExport(format: 'csv' | 'xlsx') {
     setExporting(format);

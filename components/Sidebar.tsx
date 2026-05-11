@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { memo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { Users, CreditCard } from 'lucide-react';
 import {
   IconDashboard, IconCustomers, IconPackages,
@@ -10,6 +11,7 @@ import {
 } from './icons';
 import { useBranding } from './BrandingContext';
 import api from '@/lib/api';
+import { qk } from '@/lib/queries';
 import PlanBanner from './PlanBanner';
 import UpgradeModal from './UpgradeModal';
 
@@ -54,7 +56,7 @@ interface NavItemProps {
 
 // ── Nav item ──────────────────────────────────────────────────────────────────
 
-function NavItem({ id, href, label, Icon, active, collapsed, badge }: NavItemProps) {
+const NavItem = memo(function NavItem({ id, href, label, Icon, active, collapsed, badge }: NavItemProps) {
   return (
     <li>
       <Link
@@ -97,7 +99,7 @@ function NavItem({ id, href, label, Icon, active, collapsed, badge }: NavItemPro
       </Link>
     </li>
   );
-}
+});
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -105,13 +107,14 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
   const pathname      = usePathname();
   const router        = useRouter();
   const { branding }  = useBranding();
-  const [pendingCount, setPendingCount]   = useState<number>(0);
 
-  useEffect(() => {
-    api.get<{ total: number }>('/payments', { params: { status: 'PENDING', limit: 1 } })
-      .then((res) => setPendingCount(res.data.total ?? 0))
-      .catch(() => {});
-  }, [pathname]);
+  const { data: pendingData } = useQuery({
+    queryKey: qk.pendingPayments(),
+    queryFn:  () => api.get<{ total: number }>('/payments', { params: { status: 'PENDING', limit: 1 } }).then((r) => r.data),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+  const pendingCount = pendingData?.total ?? 0;
 
   function isActive(href: string) {
     if (href === '/settings' && pathname === '/settings') return true;
@@ -233,6 +236,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
                   <img
                     src={branding.logoUrl}
                     alt=""
+                    loading="lazy"
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 ) : (
@@ -250,6 +254,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
                 <img
                   src={branding.logoUrl}
                   alt=""
+                  loading="lazy"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               ) : (
