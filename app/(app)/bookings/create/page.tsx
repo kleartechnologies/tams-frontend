@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import UpgradeModal from '@/components/UpgradeModal';
+import { useOnboarding } from '@/components/OnboardingContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -290,6 +291,7 @@ function CreateBookingForm() {
   const searchParams = useSearchParams();
   const prefilledId = searchParams.get('customerId');
   const toast = useToast();
+  const { markComplete } = useOnboarding();
 
   // Customer
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -514,6 +516,7 @@ function CreateBookingForm() {
       }
 
       toast.success('Booking created successfully');
+      markComplete('hasCreatedBooking');
       router.push(`/bookings/${bookingId}`);
     } catch (err: any) {
       const raw = err.response?.data?.message;

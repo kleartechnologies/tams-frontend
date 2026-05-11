@@ -9,6 +9,9 @@ import Header from '@/components/Header';
 import { TweaksProvider, useTweaks } from '@/components/TweaksContext';
 import { BrandingProvider } from '@/components/BrandingContext';
 import { ToastProvider } from '@/components/Toast';
+import { OnboardingProvider } from '@/components/OnboardingContext';
+import WelcomeModal from '@/components/onboarding/WelcomeModal';
+import ProductTour from '@/components/onboarding/ProductTour';
 import { supabase } from '@/lib/supabase';
 import api from '@/lib/api';
 
@@ -17,6 +20,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const { tweaks, setTweaks } = useTweaks();
   const [checked, setChecked] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [initOnboarding, setInitOnboarding] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     console.log('[AppShell] mount — checking auth');
@@ -32,12 +36,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
       // Verify the user has a backend profile with an agencyId
       try {
         console.log('[AppShell] calling /auth/me');
-        const res = await api.get<{ hasProfile: boolean; agencyId?: string }>('/auth/me');
+        const res = await api.get<{ hasProfile: boolean; agencyId?: string; onboardingProgress?: Record<string, unknown> }>('/auth/me');
         if (!res.data.hasProfile || !res.data.agencyId) {
           console.log('[AppShell] no profile → /register');
           router.push('/register');
           return;
         }
+        setInitOnboarding(res.data.onboardingProgress ?? {});
       } catch {
         console.log('[AppShell] /auth/me failed → /login');
         router.push('/login');
@@ -93,37 +98,41 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <BrandingProvider>
-      <div className={appClass} style={cssVars}>
-        {/* Backdrop — tapping it closes the mobile nav */}
-        {mobileNavOpen && (
-          <div
-            className="mobile-nav-overlay"
-            onClick={() => setMobileNavOpen(false)}
+      <OnboardingProvider initialData={initOnboarding}>
+        <WelcomeModal />
+        <ProductTour />
+        <div className={appClass} style={cssVars}>
+          {/* Backdrop — tapping it closes the mobile nav */}
+          {mobileNavOpen && (
+            <div
+              className="mobile-nav-overlay"
+              onClick={() => setMobileNavOpen(false)}
+            />
+          )}
+
+          <Sidebar
+            collapsed={tweaks.sidebarCollapsed}
+            setCollapsed={(v) => setTweaks(t => ({ ...t, sidebarCollapsed: v }))}
+            mobileOpen={mobileNavOpen}
+            onMobileClose={() => setMobileNavOpen(false)}
           />
-        )}
 
-        <Sidebar
-          collapsed={tweaks.sidebarCollapsed}
-          setCollapsed={(v) => setTweaks(t => ({ ...t, sidebarCollapsed: v }))}
-          mobileOpen={mobileNavOpen}
-          onMobileClose={() => setMobileNavOpen(false)}
-        />
+          <div className="main">
+            <Header onMenuOpen={() => setMobileNavOpen(true)} />
+            <main className="page">
+              {children}
+            </main>
+          </div>
 
-        <div className="main">
-          <Header onMenuOpen={() => setMobileNavOpen(true)} />
-          <main className="page">
-            {children}
-          </main>
+          {/* Floating action button — New Booking, mobile only */}
+          <a href="/bookings/create" className="btn-primary mobile-fab">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Booking
+          </a>
         </div>
-
-        {/* Floating action button — New Booking, mobile only */}
-        <a href="/bookings/create" className="btn-primary mobile-fab">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          New Booking
-        </a>
-      </div>
+      </OnboardingProvider>
     </BrandingProvider>
   );
 }

@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { qk, fetchSettings } from '@/lib/queries';
 import { useBranding } from '@/components/BrandingContext';
+import { useOnboarding } from '@/components/OnboardingContext';
 
 type PdfTemplate = 'classic' | 'modern' | 'premium';
 
@@ -145,6 +146,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { refresh } = useBranding();
   const queryClient = useQueryClient();
+  const { progress, startTour, dismissChecklist, showChecklist, resetProgress } = useOnboarding();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settingsData, isLoading: loading } = useQuery({
@@ -678,6 +680,58 @@ export default function SettingsPage() {
 
           <SaveRow saving={savingSST} success={successSST} error={errorSST} label="Save SST Settings" />
         </form>
+      </Card>
+
+      {/* ── Onboarding ───────────────────────────────────────────────────────── */}
+      <Card title="Onboarding" subtitle="Manage the product tour and setup checklist.">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Replay tour row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Product Tour</p>
+              <p className="text-xs text-gray-400 mt-0.5">Walk through the main features of TAMS again.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { startTour(); router.push('/dashboard'); }}
+              className="text-sm font-medium border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors whitespace-nowrap"
+            >
+              Replay Tour
+            </button>
+          </div>
+
+          {/* Checklist toggle row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Setup Checklist</p>
+              <p className="text-xs text-gray-400 mt-0.5">Show or hide the getting-started checklist on your dashboard.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!progress?.checklistDismissed}
+              onClick={() => progress?.checklistDismissed ? showChecklist() : dismissChecklist()}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${!progress?.checklistDismissed ? 'bg-blue-600' : 'bg-gray-200'}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${!progress?.checklistDismissed ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          {/* Reset row */}
+          <div style={{ paddingTop: 16, borderTop: '1px solid var(--line)' }}>
+            <button
+              type="button"
+              onClick={async () => { await resetProgress(); }}
+              className="text-sm font-medium text-red-600 hover:text-red-700"
+            >
+              Reset onboarding progress
+            </button>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Clears all checklist items and tour history. The welcome modal will not reappear.
+            </p>
+          </div>
+        </div>
       </Card>
 
     </div>

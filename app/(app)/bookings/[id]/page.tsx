@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useOnboarding } from '@/components/OnboardingContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -193,6 +194,12 @@ function deriveInvoiceNumber(bookingNumber: string | null, bookingId: string): s
 function InvoiceCard({ booking }: { booking: BookingDetail }) {
   const status    = invoiceStatus(booking.totalPaid, booking.totalAmount);
   const invNumber = deriveInvoiceNumber(booking.bookingNumber, booking.id);
+  const { markComplete, progress } = useOnboarding();
+
+  function handleOpenInvoice() {
+    if (!progress?.hasGeneratedInvoice) markComplete('hasGeneratedInvoice');
+    openDocument(`/bookings/${booking.id}/invoice`);
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -205,7 +212,7 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => openDocument(`/bookings/${booking.id}/invoice`)}
+            onClick={handleOpenInvoice}
             className="inline-flex items-center gap-1.5 text-xs font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -215,7 +222,7 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
             View Invoice
           </button>
           <button
-            onClick={() => openDocument(`/bookings/${booking.id}/invoice`)}
+            onClick={handleOpenInvoice}
             className="inline-flex items-center gap-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -268,6 +275,7 @@ export default function BookingDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const toast = useToast();
+  const { markComplete, progress } = useOnboarding();
 
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -372,6 +380,7 @@ export default function BookingDetailPage() {
       });
       setShowPaymentModal(false);
       toast.success('Payment recorded successfully.');
+      markComplete('hasAddedPayment');
       fetchBooking();
     } catch (err: any) {
       setPaymentError(err.response?.data?.message ?? 'Failed to record payment.');

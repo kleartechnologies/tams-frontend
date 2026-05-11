@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { type PlanUsage } from '@/lib/plans';
 import UpgradeModal from '@/components/UpgradeModal';
 import { useToast } from '@/components/Toast';
+import { useOnboarding } from '@/components/OnboardingContext';
 
 interface TeamMember {
   id: string;
@@ -37,6 +38,7 @@ function getInitials(fullName: string | null, email: string) {
 
 export default function TeamPage() {
   const toast = useToast();
+  const { markComplete } = useOnboarding();
 
   const [members, setMembers]         = useState<TeamMember[]>([]);
   const [usage, setUsage]             = useState<PlanUsage | null>(null);
@@ -98,6 +100,7 @@ export default function TeamPage() {
       setPassword('');
       setRole('STAFF');
       toast.success('Team member created successfully.');
+      markComplete('hasInvitedTeamMember');
       await load();
     } catch (err: any) {
       const msg = err.response?.data?.message;

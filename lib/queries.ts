@@ -14,6 +14,7 @@ export const qk = {
   payments:   (params: object)           => ['payments',  params]     as const,
   reports:    (from: string, to: string) => ['reports',   from, to]  as const,
   pendingPayments: ()                    => ['pendingPayments']       as const,
+  onboarding:     ()                     => ['onboarding']            as const,
 };
 
 // ── Fetchers ─────────────────────────────────────────────────────────────────
@@ -38,3 +39,4 @@ export const fetchCustomers = (params: object) =>
   api.get('/customers', { params }).then((r) => r.data);
 export const fetchPackages  = (params: object) =>
   api.get('/packages', { params }).then((r) => r.data);
+export const fetchOnboarding = () => api.get('/onboarding').then((r) => r.data);

@@ -20,9 +20,9 @@ import UpgradeModal from './UpgradeModal';
 const NAV_WORKSPACE = [
   { id: 'dashboard', href: '/dashboard', label: 'Dashboard', Icon: IconDashboard },
   { id: 'customers', href: '/customers', label: 'Customers', Icon: IconCustomers },
-  { id: 'bookings',  href: '/bookings',  label: 'Bookings',  Icon: IconBookings  },
-  { id: 'payments',  href: '/payments',  label: 'Payments',  Icon: IconPayments  },
-  { id: 'packages',  href: '/packages',  label: 'Packages',  Icon: IconPackages  },
+  { id: 'bookings',  href: '/bookings',  label: 'Bookings',  Icon: IconBookings,  navId: 'sb-nav-bookings'  },
+  { id: 'payments',  href: '/payments',  label: 'Payments',  Icon: IconPayments,  navId: 'sb-nav-payments'  },
+  { id: 'packages',  href: '/packages',  label: 'Packages',  Icon: IconPackages,  navId: 'sb-nav-packages'  },
 ];
 
 const NAV_ANALYTICS = [
@@ -30,9 +30,9 @@ const NAV_ANALYTICS = [
 ];
 
 const NAV_SETTINGS = [
-  { id: 'settings', href: '/settings', label: 'Settings', Icon: IconSettings },
-  { id: 'team',     href: '/settings/team', label: 'Team', Icon: Users },
-  { id: 'billing',  href: '/billing',       label: 'Billing', Icon: CreditCard },
+  { id: 'settings', href: '/settings',      label: 'Settings', Icon: IconSettings },
+  { id: 'team',     href: '/settings/team', label: 'Team',     Icon: Users,       navId: 'sb-nav-team'     },
+  { id: 'billing',  href: '/billing',       label: 'Billing',  Icon: CreditCard },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -52,15 +52,17 @@ interface NavItemProps {
   active: boolean;
   collapsed: boolean;
   badge?: number;
+  navId?: string;
 }
 
 // ── Nav item ──────────────────────────────────────────────────────────────────
 
-const NavItem = memo(function NavItem({ id, href, label, Icon, active, collapsed, badge }: NavItemProps) {
+const NavItem = memo(function NavItem({ id, href, label, Icon, active, collapsed, badge, navId }: NavItemProps) {
   return (
     <li>
       <Link
         href={href}
+        id={navId}
         className={`sb-item${active ? ' is-active' : ''}`}
         title={collapsed ? label : undefined}
       >
@@ -189,6 +191,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
                 active={isActive(item.href)}
                 collapsed={collapsed}
                 badge={item.id === 'payments' ? pendingCount : undefined}
+                navId={(item as { navId?: string }).navId}
               />
             ))}
 
@@ -215,6 +218,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, o
                 {...item}
                 active={isActive(item.href)}
                 collapsed={collapsed}
+                navId={(item as { navId?: string }).navId}
               />
             ))}
           </ul>

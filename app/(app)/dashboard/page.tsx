@@ -14,6 +14,8 @@ import {
   IconArrowUp, IconArrowDown, IconBookings,
   IconCustomers, IconPackages, IconChevron, IconPlus,
 } from '@/components/icons';
+import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist';
+import EmptyStateBanner from '@/components/onboarding/EmptyStateBanner';
 
 import type { RevPoint } from '@/components/RevenueChart';
 
@@ -523,6 +525,19 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
+
+      {/* Onboarding checklist */}
+      <OnboardingChecklist />
+
+      {/* Empty state banner — new agencies with no activity */}
+      {!loading && summary && summary.totalBookings === 0 && summary.totalSales === 0 && (
+        <EmptyStateBanner
+          icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}
+          title="No activity yet — let's get started"
+          description="Create your first travel package to start accepting bookings."
+          cta={{ label: 'Create First Package', href: '/packages' }}
+        />
+      )}
 
       {/* Quick Actions */}
       <div className="quick-actions">

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import EmptyStateBanner from '@/components/onboarding/EmptyStateBanner';
+import { useOnboarding } from '@/components/OnboardingContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -119,6 +121,7 @@ function TableSkeleton() {
 export default function PackagesPage() {
   const router = useRouter();
   const toast = useToast();
+  const { markComplete } = useOnboarding();
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -302,6 +305,7 @@ export default function PackagesPage() {
 
       setShowModal(false);
       toast.success(editTarget ? 'Package updated.' : 'Package created.');
+      if (!editTarget) markComplete('hasCreatedPackage');
       setLoading(true);
       fetchPackages();
     } catch (err: any) {
@@ -365,7 +369,16 @@ export default function PackagesPage() {
           ) : error ? (
             <div className="p-10 text-center text-sm text-red-500">{error}</div>
           ) : filtered.length === 0 ? (
-            <div className="p-10 text-center text-sm text-gray-400">No packages found.</div>
+            packages.length === 0 ? (
+              <EmptyStateBanner
+                icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="m16 8 5 5-5 5"/><path d="M10 16H7a4 4 0 0 1-4-4V7"/></svg>}
+                title="No packages yet"
+                description="Create your first travel package to start accepting bookings."
+                cta={{ label: 'Create Package', onClick: openCreate }}
+              />
+            ) : (
+              <div className="p-10 text-center text-sm text-gray-400">No packages match your search.</div>
+            )
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm">

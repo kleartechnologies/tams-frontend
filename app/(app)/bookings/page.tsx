@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import EmptyStateBanner from '@/components/onboarding/EmptyStateBanner';
+import { useOnboarding } from '@/components/OnboardingContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -97,6 +99,7 @@ function QuickPaymentModal({
   onSuccess: () => void;
 }) {
   const toast = useToast();
+  const { markComplete } = useOnboarding();
   const firstRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     amount: Number(booking.balanceDue) > 0 ? String(Number(booking.balanceDue).toFixed(2)) : '',
@@ -135,6 +138,7 @@ function QuickPaymentModal({
         notes: form.notes.trim() || undefined,
       });
       toast.success('Payment recorded successfully');
+      markComplete('hasAddedPayment');
       onSuccess();
     } catch (err: any) {
       const msg = err.response?.data?.message ?? 'Failed to record payment.';
@@ -363,16 +367,20 @@ export default function BookingsPage() {
         {error ? (
           <div className="p-10 text-center text-sm text-red-500">{error}</div>
         ) : filtered.length === 0 && !loading ? (
-          <div className="py-16 text-center">
-            <p className="text-sm font-medium text-gray-500 mb-1">
-              {search ? 'No bookings match your search.' : 'No bookings yet.'}
-            </p>
-            {!search && (
-              <Link href="/bookings/create" className="text-xs text-blue-600 hover:underline">
-                Create the first booking →
-              </Link>
-            )}
-          </div>
+          bookings.length === 0 && !search ? (
+            <EmptyStateBanner
+              icon={<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
+              title="No bookings yet"
+              description="Create your first booking to start managing your customers."
+              cta={{ label: 'New Booking', href: '/bookings/create' }}
+            />
+          ) : (
+            <div className="py-16 text-center">
+              <p className="text-sm font-medium text-gray-500">
+                {search ? 'No bookings match your search.' : 'No bookings in this status.'}
+              </p>
+            </div>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
