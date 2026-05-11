@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { type PlanUsage } from '@/lib/plans';
@@ -91,10 +91,12 @@ function BillingPage() {
   const [usage, setUsage] = useState<PlanUsage | null>(null);
   const [sub, setSub] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(successParam === 'true');
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,7 +114,60 @@ function BillingPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // After returning from Stripe checkout: sync from Stripe then poll until plan changes.
+  useEffect(() => {
+    if (successParam !== 'true') {
+      load();
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 15; // 30 seconds
+
+    async function syncAndPoll() {
+      setSyncing(true);
+
+      // Trigger an immediate server-side sync from Stripe
+      try {
+        await api.post('/stripe/sync');
+      } catch {
+        // Non-fatal — webhook may have already fired
+      }
+
+      const poll = async (): Promise<void> => {
+        if (cancelled) return;
+
+        try {
+          const res = await api.get<PlanUsage>('/plans/usage');
+          if (res.data.plan !== 'FREE' || attempts >= MAX_ATTEMPTS) {
+            setSyncing(false);
+            await load();
+            return;
+          }
+        } catch {
+          if (attempts >= MAX_ATTEMPTS) {
+            setSyncing(false);
+            await load();
+            return;
+          }
+        }
+
+        attempts++;
+        pollRef.current = setTimeout(poll, 2000);
+      };
+
+      await poll();
+    }
+
+    syncAndPoll();
+
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Clear query params after showing success banner
   useEffect(() => {
@@ -157,10 +212,15 @@ function BillingPage() {
       })
     : null;
 
-  if (loading) {
+  if (loading || syncing) {
     return (
-      <div style={{ padding: '48px 32px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ padding: '48px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <SpinnerIcon />
+        {syncing && (
+          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
+            Activating your plan&hellip;
+          </p>
+        )}
       </div>
     );
   }
