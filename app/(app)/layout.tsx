@@ -57,7 +57,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
     // Only redirect on explicit sign-out; INITIAL_SESSION is handled by checkAuth above
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       console.log('[AppShell] auth state change:', event);
-      if (event === 'SIGNED_OUT') router.push('/login');
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('tams-branding');
+        router.push('/login');
+      }
     });
 
     return () => listener.subscription.unsubscribe();

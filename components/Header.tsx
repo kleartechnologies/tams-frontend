@@ -238,6 +238,7 @@ export default function Header({ onMenuOpen }: { onMenuOpen: () => void }) {
 
   async function logout() {
     await supabase.auth.signOut();
+    localStorage.removeItem('tams-branding');
     router.push('/login');
   }
 
